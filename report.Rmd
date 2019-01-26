@@ -1,0 +1,162 @@
+---
+title: "Albemarle Equity Project"
+author: "Charlotte McClintock"
+date: "Spring 2019"
+output: 
+  html_document:
+    toc: true
+    theme: yeti
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
+library(tidyverse)
+```
+
+## About The Project
+***
+
+The aim of this project is to explore demographic trends related to equity in Albemarle County to inform work on an equity profile of the county. 
+
+### Initial Questions: 
+
+  * Who lives in the county, and how is this changing?
+  * Is the population growing?
+  * Which groups are driving growth?
+  * How diverse is the population?
+  * How does the racial/ethnic composition vary by age?
+
+
+## Data Sources
+***
+  * American Community Survey 5-Year (2013-2017), retrieved from [Social Explorer](https://www.socialexplorer.com/explore-maps) for county level age, sex, and race demographics, as well as median income, poverty rate. 
+  * Small Area Income and Poverty Estimates, retrieved from [the Census Bureau](https://www.census.gov/data-tools/demo/saipe/saipe.html?s_appName=saipe&map_yearSelector=2017&map_geoSelector=aa_c)
+
+# Demographics
+***
+
+Albemarle County has a population of 105,105 with 40,015 households. 
+
+Average household size of 2.4 persons. 
+
+
+Median Household Income of $72,265
+
+
+### Race
+```{r}
+race <- read_csv("acs17-race.csv")
+race$percent <-as.numeric(sub("%", "", race$percent))
+ggplot(race, aes(x=reorder(race, percent), y=percent, fill=race)) +  
+  stat_summary(fun.y="sum", geom="bar") + coord_flip() + guides(fill=F) + 
+  geom_text(aes(y=percent, label=percent), hjust=-0.25) + ylim(0, 90)
+
+```
+
+### Age Demographics Relative to US
+```{r, fig.width=11}
+age <- read_csv("acs17-age.csv")
+us.age <- read_csv("acs17-usage.csv") %>% select(-X4)
+age$geo <- "Albemarle"
+us.age$geo <- "United States"
+
+age <- full_join(us.age, age, by=names(age))
+
+age <- cbind(age, c(1:12))
+age$percent <-as.numeric(sub("%", "", age$percent))
+ggplot(age, aes(x=reorder(age, `c(1:12)`), y=percent, fill=geo)) +  
+  stat_summary(fun.y="sum", geom="bar", position="dodge") + 
+  geom_text(aes(y=percent, label=percent), vjust=-0.25, position = position_dodge(width = 1)) + 
+  ylim(0, 16) + 
+  theme(axis.text.x = element_text(angle = 90), legend.position = "bottom")
+
+```
+
+
+```{r}
+ed <- read_csv("acs17-education.csv")
+ed <- ed[-1,]
+ed$percent <- as.numeric(sub("%", "", ed$percent))
+ed$order <- c(1:7)
+
+ggplot(ed, aes(x=reorder(ed_attain, -order), y=percent, fill=ed_attain)) + 
+  stat_summary(fun.y="sum", geom="bar") + 
+  coord_flip() + guides(fill=FALSE) + 
+  geom_text(aes(y=percent, label=percent), hjust=-0.25)
+
+```
+
+
+
+## Economic Indicators 
+
+### Median Household Income in Albemarle Relative to Virginia, America
+
+```{r}
+saipe.HI <- read_csv("saipe-medianHI.csv") %>% 
+  select(Year, `State / County Name`, `Median Household Income in Dollars`)
+names(saipe.HI) <- c("year", "geo", "medianHI")
+saipe.HI <- mutate(saipe.HI, 
+                    geo=as.factor(geo),
+                    geo=fct_relevel(geo, 
+                                    "Albemarle County (VA)",
+                                    "Virginia",
+                                    "United States"))
+
+saipe.HI$medianHI <- as.numeric(str_replace_all(saipe.HI$medianHI, "[^[:alnum:]]", ""))
+
+ggplot(saipe.HI, aes(x=year, y=medianHI, colour=geo)) + 
+  geom_point(size=.5) + geom_line() + xlim(1989,2022) +
+  annotate("text", x=2020, y=c(60336, 71518, 77591), label=c("$60,336", "$71,518", "$77,591"))
+```
+
+
+### Albemarle Median Household Income by Race
+
+```{r, fig.width=10}
+hi.race <- read_csv("acs17-hincomerace.csv")
+hi.race <- filter(hi.race, !race=="Median Household Income (In 2017 Inflation Adjusted Dollars):"& !is.na(medianHI))
+hi.race$medianHI <- str_replace_all(hi.race$medianHI, "[^[:alnum:]]", "")
+hi.race$medianHI <- as.numeric(hi.race$medianHI)
+ggplot(hi.race, aes(x=race, y=medianHI, fill=race)) + 
+  stat_summary(fun.y="sum", geom="bar") + coord_flip() + 
+  geom_hline(yintercept=72265, linetype=3) + 
+  annotate("text", x=4, y=74000, label="Overall Median Household Income", angle=270) + 
+  geom_text(aes(y=medianHI, label=medianHI), hjust=-0.25) + ylim(0, 85000) + guides(fill=F) 
+
+```
+
+### Poverty in Albemarle Relative to Virginia, America
+```{r}
+saipe.pov <- read_csv("saipe-poverty.csv") %>% 
+  select(Year, `State / County Name`, `All Ages in Poverty Percent`)
+names(saipe.pov) <- c("year", "geo", "povrate")
+saipe.pov <- mutate(saipe.pov, 
+                    geo=as.factor(geo),
+                    geo=fct_relevel(geo, 
+                                    "United States",
+                                    "Virginia",
+                                    "Albemarle County (VA)"))
+ggplot(saipe.pov, aes(x=year, y=povrate, colour=geo)) + 
+  geom_point(size=.5) + geom_line() + ylim(0,20) + 
+  scale_x_continuous(breaks=c(1990, 1995, 2000, 2005, 2010, 2015, 2020)) + 
+  annotate("text", x=2018.5, y=c(13.4, 10.7, 7.9), label=c("13.4%", "10.7%", "7.9%"))
+```
+
+
+### Albemarle Poverty Rate by Race
+
+```{r, fig.width=11}
+pov.race <- read_csv("acs17-povertyrace.csv") %>% select(race, income, n, perc)
+pov.race <- pov.race[1:18,]
+
+pov.race <- separate(pov.race, perc, sep="%", into="perc", extra="drop")
+pov.race$perc <- as.numeric(pov.race$perc)
+
+ggplot(pov.race, aes(x=race, y=perc, fill=income)) + 
+  stat_summary(fun.y="sum", geom="bar", position="dodge") + 
+  coord_flip() + theme(legend.position = "bottom") + scale_y_continuous(breaks=c(10,20,30,40,50,60,70,80,90,100))
+```
+
+
+
