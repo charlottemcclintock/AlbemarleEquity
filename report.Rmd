@@ -35,21 +35,20 @@ The aim of this project is to explore demographic trends related to equity in Al
 # Demographics
 ***
 
-Albemarle County has a population of 105,105 with 40,015 households. 
-
-Average household size of 2.4 persons. 
-
-
-Median Household Income of $72,265
+Albemarle County has a population of 105,105 with 40,015 households and an average household size of 2.4 persons. 
 
 
 ### Race
-```{r}
+```{r, fig.width=10, fig.height=5}
 race <- read_csv("acs17-race.csv")
 race$percent <-as.numeric(sub("%", "", race$percent))
 ggplot(race, aes(x=reorder(race, percent), y=percent, fill=race)) +  
   stat_summary(fun.y="sum", geom="bar") + coord_flip() + guides(fill=F) + 
-  geom_text(aes(y=percent, label=percent), hjust=-0.25) + ylim(0, 90)
+  geom_text(aes(y=percent, label=percent), hjust=-0.25) + ylim(0, 90) +
+  labs(title="Race Demographics of Albemarle County (2017)",
+       x="Percent of All Residents",
+       y="Race", 
+       caption="Data from the American Community Survey 5-Year (2013-2017)")
 
 ```
 
@@ -68,11 +67,16 @@ ggplot(age, aes(x=reorder(age, `c(1:12)`), y=percent, fill=geo)) +
   stat_summary(fun.y="sum", geom="bar", position="dodge") + 
   geom_text(aes(y=percent, label=percent), vjust=-0.25, position = position_dodge(width = 1)) + 
   ylim(0, 16) + 
-  theme(axis.text.x = element_text(angle = 90), legend.position = "bottom")
+  theme(axis.text.x = element_text(angle = 90), legend.position = "bottom")+
+  labs(title="Age Demographics of Albemarle County vs. US Totals (2017)",
+       x="Percent of All Residents",
+       y="Age", 
+       caption="Data from the American Community Survey 5-Year (2013-2017)",
+       fill="Geography")
 
 ```
 
-
+### Educational Attainment
 ```{r}
 ed <- read_csv("acs17-education.csv")
 ed <- ed[-1,]
@@ -82,17 +86,44 @@ ed$order <- c(1:7)
 ggplot(ed, aes(x=reorder(ed_attain, -order), y=percent, fill=ed_attain)) + 
   stat_summary(fun.y="sum", geom="bar") + 
   coord_flip() + guides(fill=FALSE) + 
-  geom_text(aes(y=percent, label=percent), hjust=-0.25)
+  geom_text(aes(y=percent, label=percent), hjust=-0.25) +
+  labs(title="Educational Attainment Demographics of Albemarle County (2017)",
+       x="Percent of All Residents",
+       y="Educational Attainment", 
+       caption="Data from the American Community Survey 5-Year (2013-2017)")
 
 ```
 
+### Household Demographics
+
+```{r, fig.width=11, fig.height=4}
+house <- read_csv("acs17-household.csv")
+house <- separate(house, percent, sep="%", into="percent", extra="drop")
+
+house <- mutate(house, 
+                household_type=as.factor(household_type),
+                household_type=fct_recode(household_type, 
+   "Female Householder, No Spouse"="Female Householder, No Husband Present",
+   "Male Householder, No Spouse"="Male Householder, No Wife Present"))
+ggplot(subset(house, 
+              !household_type=="Other Family:"&!household_type=="Family Households:"&!household_type=="Nonfamily Households:"), 
+       aes(x=household_type, y=as.numeric(percent), fill=household_type)) + 
+  stat_summary(fun.y = "sum", geom = "bar") + 
+  theme(axis.text.x = element_text(angle = 90), legend.position = "bottom") + 
+  coord_flip() + guides(fill=F) + 
+  labs(title="Household Demographics for Albemarle County (2017)",
+       y="Percent of All Households",
+       x="Household Type", 
+       caption="Data from the American Community Survey 5-Year (2013-2017)") + 
+  geom_text(aes(label=percent, y=as.numeric(percent), hjust=-.25))
+```
 
 
 ## Economic Indicators 
 
 ### Median Household Income in Albemarle Relative to Virginia, America
 
-```{r}
+```{r, fig.width=8}
 saipe.HI <- read_csv("saipe-medianHI.csv") %>% 
   select(Year, `State / County Name`, `Median Household Income in Dollars`)
 names(saipe.HI) <- c("year", "geo", "medianHI")
@@ -107,7 +138,13 @@ saipe.HI$medianHI <- as.numeric(str_replace_all(saipe.HI$medianHI, "[^[:alnum:]]
 
 ggplot(saipe.HI, aes(x=year, y=medianHI, colour=geo)) + 
   geom_point(size=.5) + geom_line() + xlim(1989,2022) +
-  annotate("text", x=2020, y=c(60336, 71518, 77591), label=c("$60,336", "$71,518", "$77,591"))
+  annotate("text", x=2020, y=c(60336, 71518, 77591), label=c("$60,336", "$71,518", "$77,591")) +
+  labs(title="Albemarle County, Virginia, and US Median Household Income (2017)",
+       subtitle = "Albemarle has a consistently higher median income relative to US, VA",
+       x="Year",
+       y="Median Household Income", 
+       caption="Data from the Census Small Area Income and Poverty Estimates",
+       color="Geography")
 ```
 
 
@@ -122,12 +159,16 @@ ggplot(hi.race, aes(x=race, y=medianHI, fill=race)) +
   stat_summary(fun.y="sum", geom="bar") + coord_flip() + 
   geom_hline(yintercept=72265, linetype=3) + 
   annotate("text", x=4, y=74000, label="Overall Median Household Income", angle=270) + 
-  geom_text(aes(y=medianHI, label=medianHI), hjust=-0.25) + ylim(0, 85000) + guides(fill=F) 
+  geom_text(aes(y=medianHI, label=medianHI), hjust=-0.25) + ylim(0, 85000) + guides(fill=F) +
+  labs(title="Income Demographics of Albemarle County by Race (2017)",
+       x="Median Household Income",
+       y="Race", 
+       caption="Data from the American Community Survey 5-Year (2013-2017)")
 
 ```
 
 ### Poverty in Albemarle Relative to Virginia, America
-```{r}
+```{r, fig.width=8}
 saipe.pov <- read_csv("saipe-poverty.csv") %>% 
   select(Year, `State / County Name`, `All Ages in Poverty Percent`)
 names(saipe.pov) <- c("year", "geo", "povrate")
@@ -140,23 +181,79 @@ saipe.pov <- mutate(saipe.pov,
 ggplot(saipe.pov, aes(x=year, y=povrate, colour=geo)) + 
   geom_point(size=.5) + geom_line() + ylim(0,20) + 
   scale_x_continuous(breaks=c(1990, 1995, 2000, 2005, 2010, 2015, 2020)) + 
-  annotate("text", x=2018.5, y=c(13.4, 10.7, 7.9), label=c("13.4%", "10.7%", "7.9%"))
+  annotate("text", x=2018.5, y=c(13.4, 10.7, 7.9), label=c("13.4%", "10.7%", "7.9%"))+
+  labs(title="Albemarle County, Virginia, and US Median Income (2017)",
+       subtitle="Albemarle has a consistently lower poverty rate than VA, US",
+       x="Year",
+       y="Poverty Rate", 
+       caption="Data from the Census Small Area Income and Poverty Estimates",
+       color="Geography")
 ```
 
 
 ### Albemarle Poverty Rate by Race
 
-```{r, fig.width=11}
+```{r, fig.width=11, fig.height=6}
 pov.race <- read_csv("acs17-povertyrace.csv") %>% select(race, income, n, perc)
 pov.race <- pov.race[1:18,]
 
 pov.race <- separate(pov.race, perc, sep="%", into="perc", extra="drop")
 pov.race$perc <- as.numeric(pov.race$perc)
 
-ggplot(pov.race, aes(x=race, y=perc, fill=income)) + 
+ggplot(filter(pov.race, income=="Income in Below Poverty Level"), aes(x=race, y=perc, fill=race)) + 
   stat_summary(fun.y="sum", geom="bar", position="dodge") + 
-  coord_flip() + theme(legend.position = "bottom") + scale_y_continuous(breaks=c(10,20,30,40,50,60,70,80,90,100))
+  coord_flip() + guides(fill=F) + scale_y_continuous(breaks=c(10,20,30,40,50,60,70,80,90,100)) + 
+  geom_hline(yintercept = 7.9, linetype=2) + 
+  scale_y_continuous(breaks=c(5,10,15,20,25)) +
+  annotate("text", x=4.5, y=8.4, label="Overall Poverty Rate", angle=270) +
+  labs(title="Poverty Rate by Race, Albemarle County (2017)",
+       y="Poverty Rate",
+       x="Race", 
+       caption="Data from the American Community Survey 5-Year (2013-2017)")+ 
+  geom_text(aes(y=perc, label=perc), hjust=-0.25) + ylim(0, 26)
 ```
 
 
+### Income Distribution
+
+```{r fig.width=9}
+earn <- read_csv("acs17-earnings.csv", skip=1)
+earn <- earn[, c(3, 40:147)]
+
+earn <- gather(earn, 2:109, key="group", value="num")
+
+earn <- separate(earn, group, sep=";", into=c("group", "type", "about"))
+earn <- separate(earn, about, sep="EARNINGS - ", into=c("worker_type", "income_cat"))
+
+earn <- mutate(earn, 
+               income_cat=as.factor(income_cat),
+               income_cat=fct_relevel(income_cat,
+                                "$1 to $9,999 or loss",
+                                "$10,000 to $14,999",
+                                "$15,000 to $24,999", 
+                                "$25,000 to $34,999",
+                                "$35,000 to $49,999",
+                                "$50,000 to $64,999", 
+                                "$65,000 to $74,999", 
+                                "$75,000 to $99,999", 
+                                "$100,000 or more"))
+
+ggplot(filter(earn, group=="Percent"&type==" Estimate"), aes(x=income_cat, y=num)) +
+  stat_summary(fun.y="sum", geom="bar", fill="dark green") + 
+  labs(title="Income Demographics for Albemarle County (2017)",
+       y="Percent of All Earners",
+       x="Income Category", 
+       caption="Data from the American Community Survey 5-Year (2013-2017)")
+```
+
+### Income Distribution by Gender
+
+```{r, fig.width=9}
+ggplot(filter(earn, (group=="Percent Male"|group=="Percent Female")&type==" Estimate"), aes(x=income_cat, y=num, fill=group)) +
+  stat_summary(fun.y="sum", geom="bar", position = "dodge") + 
+  labs(title="Income Demographics by Gender for Albemarle County (2017)",
+       y="Percent of All Earners",
+       x="Income Category", 
+       caption="Data from the American Community Survey 5-Year (2013-2017)")
+```
 
