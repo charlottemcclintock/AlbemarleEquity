@@ -257,3 +257,73 @@ ggplot(filter(earn, (group=="Percent Male"|group=="Percent Female")&type==" Esti
        caption="Data from the American Community Survey 5-Year (2013-2017)")
 ```
 
+
+
+# Race 
+
+```{r}
+age10 <- read_csv("2010age.csv")
+names(age10) <- c("age", "count", "perc")
+age10$year <- "2010"
+
+age00 <- read_csv("2000age.csv")
+names(age00) <- c("age", "count", "perc")
+age00$year <- "2000"
+
+age90 <- read_csv("1990age.csv")
+names(age90) <- c("age", "count", "perc")
+age90$year <- "1990"
+
+age80 <- read_csv("1980age.csv")
+names(age80) <- c("age", "count", "perc")
+age80$year <- "1980"
+
+age70 <- read_csv("1970age.csv")
+names(age70) <- c("age", "count", "perc")
+age70$year <- "1970"
+
+age <- list(age10, age00, age90, age80, age70) %>% reduce(full_join, by = c(names(age10)))
+
+age$age <- ifelse(age$age=="Under 5 year", "Under 5 years", age$age)
+age$age <- ifelse(age$age=="65 and 74 years", "65 to 74 years", age$age)
+age$age <- ifelse(age$age=="75 to 84 years", "75 years and over", age$age)
+age$age <- ifelse(age$age=="85 years and over", "75 years and over", age$age)
+age$perc <-as.numeric(sub("%", "", age$perc))
+age <- age %>% group_by(age, year) %>% summarise(count=sum(count), perc=sum(perc))
+
+age$age <- as.factor(age$age)
+age$age <- fct_relevel(age$age, 
+                       "Under 5 years","5 to 9 years",
+                       "10 to 14 years","15 to 17 years",
+                       "18 to 24 years","25 to 34 years",
+                       "35 to 44 years","45 to 54 years",
+                       "55 to 64 years","65 to 74 years",
+                       "75 years and over")
+ggplot(age, aes(age, count, fill=year)) + stat_summary(fun.y="sum", geom="bar") + coord_flip() + facet_grid(~year) + guides(fill=F)
+
+ggplot(age, aes(age, perc, fill=year)) + stat_summary(fun.y="sum", geom="bar") + coord_flip() + facet_grid(~year) + guides(fill=F)
+
+```
+
+```{r}
+race10 <- read_csv("2010race.csv")
+names(race10) <- c("race", "count", "perc")
+race10$year <- "2010"
+
+race00 <- read_csv("2000race.csv")
+names(race00) <- c("race", "count", "perc")
+race00$year <- "2000"
+
+race90 <- read_csv("1990race.csv")
+names(race90) <- c("race", "count", "perc")
+race90$year <- "1990"
+
+race80 <- read_csv("1980race.csv")
+names(race80) <- c("race", "count", "perc")
+race80$year <- "1980"
+
+race70 <- read_csv("1970race.csv")
+names(race70) <- c("race", "count", "perc")
+race70$year <- "1970"
+```
+
